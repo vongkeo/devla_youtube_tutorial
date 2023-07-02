@@ -1,0 +1,91 @@
+```
+GIN_MODE=release # debug, release
+APP_PORT=8080
+API_SECRET=129636cf-38d9-4e1e-b581-7268df2c3137
+
+DB_HOST=db
+DB_PORT=3306
+DB_USER=root
+DB_PASS=root
+DB_NAME=go_api
+DB_CHARSET=utf8mb4
+DB_LOC=Local
+
+TOKEN_EXPIRE=1440
+```
+
+```docker
+# Stage 1: Build stage
+FROM golang:1.20.5-alpine3.18  as builder
+
+# Add Maintainer Info
+LABEL maintainer="Vongkeo KEOSAVANH <vongkeo@indochinabank.com>"
+
+# Set the Current Working Directory inside the container
+WORKDIR /app
+
+# Copy go mod and sum files
+COPY go.mod go.sum ./
+
+# Download all dependencies. Dependencies will be cached if the go.mod and go.sum files are not changed
+RUN go mod download
+
+# Copy the source from the current directory to the Working Directory inside the container
+COPY . .
+
+# Build the Go app
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
+
+######## Start a new stage from scratch #######
+FROM alpine:latest  
+
+RUN apk --no-cache add ca-certificates
+
+WORKDIR /root/
+
+# Copy the Pre-built binary file from the previous stage
+COPY --from=builder /app/main . 
+# copy env file to root directory 
+COPY --from=builder /app/.env .
+
+# Command to run the executable
+CMD ["./main"]
+```
+
+```
+version: '3'
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - 8080:8080
+    environment:
+      - GIN_MODE=$GIN_MODE
+      - APP_PORT=$APP_PORT
+      - DB_HOST=$DB_HOST
+      - DB_PORT=$DB_PORT
+      - DB_USER=$DB_USER
+      - DB_PASS=$DB_PASS
+      - DB_NAME=$DB_NAME
+    depends_on:
+      - db
+
+  db:
+    image: mysql:8.0
+    ports:
+      - 3366:3306
+    environment:
+      MYSQL_USER: $DB_USER
+      MYSQL_PASSWORD: $DB_PASS
+      MYSQL_ROOT_PASSWORD: $DB_PASS
+      MYSQL_DATABASE: $DB_NAME
+
+    volumes:
+      - db_data:/var/lib/mysql
+
+volumes:
+  db_data:
+```
