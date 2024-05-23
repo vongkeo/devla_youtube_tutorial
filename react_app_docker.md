@@ -1,4 +1,4 @@
-# Dockerfile
+## Dockerfile
 ```bash
 # pull the node image
 FROM node:14
@@ -21,8 +21,7 @@ EXPOSE 3000
 # start the app
 CMD ["npm", "start"]
 ```
--------------------------------------------------
-# docker-compose.yml
+## docker-compose.yml
 ```yml
 version: '3.1'
 services:
